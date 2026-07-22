@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // CORS Headers
+  // CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -8,33 +8,20 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ reply: 'Method not allowed. Use POST.' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ reply: 'Method not allowed.' });
 
   try {
     const { message } = req.body || {};
     const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!message) return res.status(400).json({ reply: 'Message required.' });
+    if (!apiKey) return res.status(500).json({ reply: '❌ GEMINI_API_KEY Missing in Vercel!' });
+
+    // 👉 USE THIS LATEST ACTIVE MODEL STRING DIRECTLY (gemini-2.5-flash)
+    const activeModel = process.env.GEMINI_MODEL_NAME || 'gemini-2.5-flash';
     
-    // 👉 Dynamic / Generic Model Name (Default to stable gemini-1.5-flash)
-    const modelName = process.env.GEMINI_MODEL_NAME || 'gemini-1.5-flash';
-
-    if (!message) {
-      return res.status(400).json({ reply: 'Message required.' });
-    }
-
-    if (!apiKey) {
-      return res.status(500).json({ 
-        reply: '❌ Vercel Settings mein GEMINI_API_KEY missing hai!' 
-      });
-    }
-
-    // 👉 Dynamic REST API Endpoint Construction
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
 
     const systemPrompt = `You are a B2B Procurement AI Agent.
 Extract product requirements into standard Markdown response AND structured JSON block.
@@ -75,7 +62,7 @@ JSON format must be:
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API Error:", data);
+      console.error("Gemini API Error details:", data);
       return res.status(500).json({ 
         reply: `Gemini API Error: ${data.error?.message || 'Failed to fetch from Gemini'}` 
       });
