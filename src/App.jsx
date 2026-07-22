@@ -49,16 +49,18 @@ function App() {
   const handleQuantityChange = (index, newQty) => {
     const qty = Math.max(1, Number(newQty) || 1);
     const updated = [...currentQuote];
+    const unitPrice = Number(updated[index].final_price) || 0;
     updated[index].requested_qty = qty;
-    updated[index].total = qty * Number(updated[index].final_price || 0);
+    updated[index].total = qty * unitPrice;
     setCurrentQuote(updated);
   };
 
   const handlePriceChange = (index, newPrice) => {
     const price = Math.max(0, Number(newPrice) || 0);
     const updated = [...currentQuote];
+    const qty = Number(updated[index].requested_qty) || 1;
     updated[index].final_price = price;
-    updated[index].total = Number(updated[index].requested_qty || 1) * price;
+    updated[index].total = qty * price;
     setCurrentQuote(updated);
   };
 
@@ -148,7 +150,7 @@ function App() {
     }
   };
 
-  // 4. API CHAT HANDLER
+  // 4. API CHAT HANDLER WITH MULTI-KEY PRICING FALLBACK
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -178,12 +180,19 @@ function App() {
             const parsedJson = JSON.parse(jsonString.trim());
             
             if (parsedJson.product_found && Array.isArray(parsedJson.items)) {
-              const sanitizedItems = parsedJson.items.map(item => ({
-                ...item,
-                requested_qty: Number(item.requested_qty) || 1,
-                final_price: Number(item.final_price) || 0,
-                total: Number(item.total) || ((Number(item.requested_qty) || 1) * (Number(item.final_price) || 0))
-              }));
+              const sanitizedItems = parsedJson.items.map(item => {
+                const qty = Number(item.requested_qty) || 1;
+                // Capture price whether Gemini keys it as final_price, price, or unit_price
+                const unitPrice = Number(item.final_price || item.price || item.unit_price) || 0;
+                const calcTotal = Number(item.total) || (qty * unitPrice);
+
+                return {
+                  ...item,
+                  requested_qty: qty,
+                  final_price: unitPrice,
+                  total: calcTotal
+                };
+              });
 
               setCurrentQuote(sanitizedItems);
               if (window.innerWidth < 768) setActiveTab('quote');
@@ -303,7 +312,7 @@ function App() {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-md shrink-0 disabled:opacity-50"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-md shrink-0 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? 'Sending...' : 'Send'}
               </button>

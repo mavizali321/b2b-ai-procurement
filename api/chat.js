@@ -1,12 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
 
 const systemPrompt = `You are an expert B2B Procurement AI Agent.
-Your job is to extract ALL requested products from the client's message and generate a structured multi-item RFQ array.
+Your job is to extract ALL requested products from the client's message and generate a structured multi-item RFQ array with REALISTIC ESTIMATED B2B UNIT PRICES in USD.
 
 CRITICAL INSTRUCTIONS:
 - Always respond with a helpful conversational text message first.
 - Then, output a valid JSON block inside a markdown code block (\`\`\`json ... \`\`\`).
-- You MUST process ALL requested items in the request. Never limit to just one item.
+- You MUST estimate realistic wholesale unit prices for each item (e.g., Laptops $800-$1500, Mice $15-$40, Switches $300-$1000). Never return 0 for price.
+- Return pricing keys as BOTH "price" and "final_price" so frontend state maps it seamlessly.
 - The JSON block strictly must match this structure:
 
 \`\`\`json
@@ -15,8 +16,9 @@ CRITICAL INSTRUCTIONS:
   "items": [
     {
       "name": "Dell Laptops",
-      "sku": "B2B-DELL-LAT-5000",
+      "sku": "B2B-DELL-LAT-GENERIC",
       "requested_qty": 50,
+      "price": 1200.00,
       "final_price": 1200.00,
       "total": 60000.00
     }
