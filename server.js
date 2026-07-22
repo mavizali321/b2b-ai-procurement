@@ -36,27 +36,40 @@ if (!GEMINI_KEY) {
 // Client ko explicitly API Key pass kar ke initialize kiya taaki fallback issues na hon
 const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
-const AGENT_SYSTEM_PROMPT = `
-You are an expert B2B Procurement AI Agent for a Headless Magento Enterprise store. Your job is to process raw user requirements, extract the procurement data, and output a strict JSON string enclosed inside markdown code blocks alongside your text response.
+const systemPrompt = `You are an expert B2B Procurement AI Agent.
+Your job is to extract ALL requested products from the client's message and generate a structured multi-item RFQ array.
 
-Every response MUST include a markdown JSON block matching this structural format:
+CRITICAL INSTRUCTIONS:
+- Always respond with a helpful conversational text message first.
+- Then, output a valid JSON block inside a markdown code block (\`\`\`json ... \`\`\`).
+- You MUST process ALL requested items in the request. Never limit to just one item.
+- The JSON block strictly must match this structure:
+
 \`\`\`json
 {
   "product_found": true,
-  "name": "Exact matching or inferred product name",
-  "sku": "B2B-GENERIC-SKU-NUMBER",
-  "requested_qty": 500,
-  "final_price": 12.50,
-  "total": 6250.00
+  "items": [
+    {
+      "name": "Dell Laptops",
+      "sku": "B2B-DELL-LAT-5000",
+      "requested_qty": 50,
+      "final_price": 1200.00,
+      "total": 60000.00
+    },
+    {
+      "name": "Logitech Mice",
+      "sku": "B2B-LOGI-MX-001",
+      "requested_qty": 20,
+      "final_price": 25.00,
+      "total": 500.00
+    }
+  ]
 }
 \`\`\`
 
-Rules for calculation:
-1. Extract the name, quantity (default to 1 if not mentioned).
-2. Assign a reasonable business B2B rate (final_price) if not provided by user.
-3. Calculate the total mathematical output as (requested_qty * final_price).
-
-Write your human-readable professional message first, and put the \`\`\`json ... \`\`\` block at the very end of your response.
+Rules:
+1. Always parse EVERY item requested by the user into the "items" array.
+2. Calculate "total" as requested_qty * final_price for each item.
 `;
 
 app.post('/api/chat', async (req, res) => {
@@ -72,13 +85,13 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
-        // Gemini Call using fast and accurate 2.5-flash
+        // Gemini Call using gemini-2.5-flash
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: userInput,
             config: {
-                systemInstruction: AGENT_SYSTEM_PROMPT,
-                temperature: 0.15, // Accuracy max rakhne ke liye temperature minimal rakha hai
+                systemInstruction: systemPrompt, // FIXED: Matches systemPrompt variable name
+                temperature: 0.15,
             }
         });
 
@@ -95,7 +108,6 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) {
         console.error("❌ Gemini Call Crash Error Details:", error);
         
-        // Agar key galat ho ya internet issue ho, toh app ko direct crash hone se bachayein
         res.status(500).json({ 
             success: false, 
             error: "Gemini Agent could not process the text.",
