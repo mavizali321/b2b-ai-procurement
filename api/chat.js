@@ -18,8 +18,8 @@ export default async function handler(req, res) {
     if (!message) return res.status(400).json({ reply: 'Message required.' });
     if (!apiKey) return res.status(500).json({ reply: '❌ GEMINI_API_KEY Missing in Vercel!' });
 
-    // 👉 USE THIS LATEST ACTIVE MODEL STRING DIRECTLY (gemini-2.5-flash)
-    const activeModel = process.env.GEMINI_MODEL_NAME || 'gemini-2.5-flash';
+    // 👉 USE THIS LATEST ACTIVE MODEL STRING DIRECTLY (gemini-1.5-flash)
+    const activeModel = process.env.GEMINI_MODEL_NAME || 'gemini-1.5-flash';
     
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
 

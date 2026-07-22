@@ -85,9 +85,9 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
-        // Gemini Call using gemini-2.5-flash
+        // Gemini Call using gemini-1.5-flash
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash',
             contents: userInput,
             config: {
                 systemInstruction: systemPrompt, // FIXED: Matches systemPrompt variable name
