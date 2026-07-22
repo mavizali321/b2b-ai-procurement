@@ -19,6 +19,9 @@ export default async function handler(req, res) {
   try {
     const { message } = req.body || {};
     const apiKey = process.env.GEMINI_API_KEY;
+    
+    // 👉 Dynamic / Generic Model Name (Default to stable gemini-1.5-flash)
+    const modelName = process.env.GEMINI_MODEL_NAME || 'gemini-1.5-flash';
 
     if (!message) {
       return res.status(400).json({ reply: 'Message required.' });
@@ -30,8 +33,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Direct Gemini REST API Call (Fastest & Zero NPM SDK Issues)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // 👉 Dynamic REST API Endpoint Construction
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const systemPrompt = `You are a B2B Procurement AI Agent.
 Extract product requirements into standard Markdown response AND structured JSON block.
