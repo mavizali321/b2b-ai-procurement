@@ -142,7 +142,7 @@ function App() {
   };
 
   const handleClearAllData = () => {
-    if (window.confirm("Kiya aap tamaam chat aur history clear karna chahte hain?")) {
+    if (window.confirm("Kiya aap tamaam chat aur history clear karke nayi quote shuru karna chahte hain?")) {
       localStorage.clear();
       setMessages([{ sender: 'bot', text: 'Welcome! Main aapka B2B Procurement Assistant hoon. Aapko aaj kis material ki requirement hai?' }]);
       setCurrentQuote([]);
@@ -150,7 +150,7 @@ function App() {
     }
   };
 
-  // 4. API CHAT HANDLER WITH MULTI-KEY PRICING FALLBACK
+  // 4. API CHAT HANDLER (WITH CUMULATIVE APPEND LOGIC)
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -182,7 +182,6 @@ function App() {
             if (parsedJson.product_found && Array.isArray(parsedJson.items)) {
               const sanitizedItems = parsedJson.items.map(item => {
                 const qty = Number(item.requested_qty) || 1;
-                // Capture price whether Gemini keys it as final_price, price, or unit_price
                 const unitPrice = Number(item.final_price || item.price || item.unit_price) || 0;
                 const calcTotal = Number(item.total) || (qty * unitPrice);
 
@@ -194,7 +193,9 @@ function App() {
                 };
               });
 
-              setCurrentQuote(sanitizedItems);
+              // 👉 APPEND NAYE ITEMS TO EXISTING MANIFEST TABLE
+              setCurrentQuote((prevQuote) => [...prevQuote, ...sanitizedItems]);
+
               if (window.innerWidth < 768) setActiveTab('quote');
             }
             cleanText = data.reply.replace(jsonRegex, '').trim();
@@ -235,10 +236,10 @@ function App() {
           </button>
           <button 
             onClick={handleClearAllData}
-            title="Reset Chat & Local Storage"
+            title="Reset Chat & Start New RFQ"
             className="bg-red-900/30 hover:bg-red-800/50 border border-red-800/50 text-red-300 text-xs font-semibold px-2.5 py-2 rounded-xl transition-all cursor-pointer"
           >
-            🗑️
+            🗑️ Clear / New RFQ
           </button>
         </div>
       </header>
