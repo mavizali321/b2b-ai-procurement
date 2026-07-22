@@ -18,10 +18,11 @@ export default async function handler(req, res) {
     if (!message) return res.status(400).json({ reply: 'Message required.' });
     if (!apiKey) return res.status(500).json({ reply: '❌ GEMINI_API_KEY Missing in Vercel!' });
 
-    // 👉 USE THIS LATEST ACTIVE MODEL STRING DIRECTLY (gemini-1.5-flash)
-    const activeModel = process.env.GEMINI_MODEL_NAME || 'gemini-1.5-flash';
+    // ✅ FIXED: Using 'gemini-1.5-flash-latest' or 'gemini-2.0-flash' which works seamlessly with REST API
+    const activeModel = process.env.GEMINI_MODEL_NAME || 'gemini-1.5-flash-latest';
     
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
+    // ✅ FIXED: Endpoint updated to 'v1' instead of 'v1beta'
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${activeModel}:generateContent?key=${apiKey}`;
 
     const systemPrompt = `You are a B2B Procurement AI Agent.
 Extract product requirements into standard Markdown response AND structured JSON block.
