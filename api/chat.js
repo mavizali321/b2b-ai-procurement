@@ -1,9 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Initialize Gemini SDK safely
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -24,50 +18,71 @@ export default async function handler(req, res) {
 
   try {
     const { message } = req.body || {};
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!message) {
-      return res.status(400).json({ reply: 'Requirement text is required.' });
+      return res.status(400).json({ reply: 'Message required.' });
     }
 
-    if (!genAI) {
+    if (!apiKey) {
       return res.status(500).json({ 
-        reply: 'GEMINI_API_KEY Vercel Environment Variables mein set nahi hai! Deployment settings check karein.' 
+        reply: '❌ Vercel Settings mein GEMINI_API_KEY missing hai!' 
       });
     }
 
-    // Using Gemini 2.5 Flash for high performance & structured parsing
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      systemInstruction: `You are an enterprise B2B Procurement AI Agent. 
-When a user asks for items, extract items with fields: name, sku, requested_qty, final_price, total. 
-ALWAYS return valid markdown text along with a JSON block in this structure:
+    // Direct Gemini REST API Call (Fastest & Zero NPM SDK Issues)
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const systemPrompt = `You are a B2B Procurement AI Agent.
+Extract product requirements into standard Markdown response AND structured JSON block.
+JSON format must be:
 \`\`\`json
 {
   "product_found": true,
   "items": [
     {
-      "name": "Item Name",
+      "name": "Product Name",
       "sku": "B2B-SKU-CODE",
       "requested_qty": 10,
-      "final_price": 500,
-      "total": 5000
+      "final_price": 250,
+      "total": 2500
     }
   ]
 }
-\`\`\``
+\`\`\``;
+
+    const payload = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: systemPrompt },
+            { text: `User request: ${message}` }
+          ]
+        }
+      ]
+    };
+
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    const result = await model.generateContent(message);
-    const responseText = result.response.text();
+    const data = await response.json();
 
-    return res.status(200).json({ reply: responseText });
+    if (!response.ok) {
+      console.error("Gemini API Error:", data);
+      return res.status(500).json({ 
+        reply: `Gemini API Error: ${data.error?.message || 'Failed to fetch from Gemini'}` 
+      });
+    }
 
-  } catch (error) {
-    console.error("❌ Agent API Execution Error:", error);
-    
-    // Return structured error so Frontend UI displays exact issue instead of breaking
-    return res.status(500).json({ 
-      reply: `⚠️ AI Agent Execution Error: ${error.message || 'Server timeout or rate limit.'}` 
-    });
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+    return res.status(200).json({ reply: aiText });
+
+  } catch (err) {
+    console.error("Backend Server Error:", err);
+    return res.status(500).json({ reply: `Server Error: ${err.message}` });
   }
 }

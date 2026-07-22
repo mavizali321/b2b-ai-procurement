@@ -150,7 +150,7 @@ function App() {
     }
   };
 
-  // 4. API CHAT HANDLER (WITH CUMULATIVE APPEND LOGIC)
+  // 4. API CHAT HANDLER (WITH ROBUST ERROR BOUNDARY & CUMULATIVE APPEND LOGIC)
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -166,6 +166,19 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
       });
+
+      // Handle non-OK HTTP status gracefully
+      if (!response.ok) {
+        const errText = await response.text();
+        let parsedErr = "Backend Server Error";
+        try {
+          const jsonErr = JSON.parse(errText);
+          parsedErr = jsonErr.reply || jsonErr.error || jsonErr.message || errText;
+        } catch (_) {
+          parsedErr = `Server Error (${response.status}): ${response.statusText}`;
+        }
+        throw new Error(parsedErr);
+      }
 
       const data = await response.json();
 
@@ -193,7 +206,7 @@ function App() {
                 };
               });
 
-              // 👉 APPEND NAYE ITEMS TO EXISTING MANIFEST TABLE
+              // APPEND NAYE ITEMS TO EXISTING MANIFEST TABLE
               setCurrentQuote((prevQuote) => [...prevQuote, ...sanitizedItems]);
 
               if (window.innerWidth < 768) setActiveTab('quote');
@@ -208,7 +221,7 @@ function App() {
       }
     } catch (error) {
       console.error("Connection Error:", error);
-      setMessages((prev) => [...prev, { sender: 'bot', text: 'Backend server se connection toot gaya.' }]);
+      setMessages((prev) => [...prev, { sender: 'bot', text: `⚠️ Error: ${error.message}` }]);
     } finally {
       setLoading(false);
     }
