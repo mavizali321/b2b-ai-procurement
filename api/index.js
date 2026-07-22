@@ -45,7 +45,6 @@ CRITICAL INSTRUCTIONS:
 \`\`\`
 `;
 
-// Note: Route path here is /api/chat or / chat depending on rewrites, so handling both smoothly:
 app.post(['/api/chat', '/chat'], async (req, res) => {
     try {
         const userInput = req.body.message;
@@ -69,5 +68,5 @@ app.post(['/api/chat', '/chat'], async (req, res) => {
     }
 });
 
-// Export default app for Vercel Serverless
+// Vercel Serverless Export
 export default app;
